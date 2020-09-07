@@ -136,7 +136,7 @@ typedef struct tComboInfo
 
 typedef struct tBkMk
 {
-	LONG				lAddress;				// bookmark address
+	LONG_PTR				lAddress;				// bookmark address
 	UINT				iItem;					// row of bookmark
 } tBkMk;
 

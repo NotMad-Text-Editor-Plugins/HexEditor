@@ -151,7 +151,7 @@ BOOL APIENTRY DllMain( HANDLE hModule,
 				::DestroyIcon(g_TBHex.hToolbarIcon);
 
 			/* Remove subclaasing */
-			SetWindowLongPtr(nppData._nppHandle, GWLP_WNDPROC, (LONG)wndProcNotepad);
+			SetWindowLongPtr(nppData._nppHandle, GWLP_WNDPROC, (LONG_PTR)wndProcNotepad);
 			break;
 		}
 		case DLL_THREAD_ATTACH:

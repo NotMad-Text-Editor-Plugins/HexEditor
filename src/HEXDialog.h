@@ -594,7 +594,7 @@ private:
 	{
 		INT		i		= 0;
 		INT		j		= 0;
-		LONG	lAddr	= 0;
+		LONG_PTR	lAddr	= 0;
 
 		/* return on empty list */
 		if (d > h || d < 0)

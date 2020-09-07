@@ -416,6 +416,7 @@ void ClearMenuStructures(void)
 
 void GetShortCuts(HWND hWnd)
 {
+	//if(1) return;
     TCHAR   text[64];
     LPTSTR  pSc     = NULL;
     LPTSTR  pScKey  = NULL;

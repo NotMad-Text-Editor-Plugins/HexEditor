@@ -63,6 +63,11 @@ static int CALLBACK EnumFontFamExProc(ENUMLOGFONTEX *lpelfe, NEWTEXTMETRICEX *lp
 UINT OptionDlg::doDialog(tProp *prop)
 {
 	_pProp = prop;
+	//if(!isCreated()) {
+	//	create(IDD_OPTION_DLG);
+	//}
+	//display();
+	//return IDOK;
 	return (UINT)::DialogBoxParam(_hInst, MAKEINTRESOURCE(IDD_OPTION_DLG), _hParent,  (DLGPROC)dlgProc, (LPARAM)this);
 }
 
