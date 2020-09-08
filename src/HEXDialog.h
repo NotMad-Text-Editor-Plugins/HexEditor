@@ -305,31 +305,30 @@ public:
 
 	void SetCompareResult(tCmpResult* pCmpResult, tCmpResult* pCmpRef = NULL)
 	{
-		if(_pCurProp) {
-			if (pCmpResult == NULL) {
-				if (_pCurProp->pCmpResult != NULL) {
-					/* if a reference exist mark in them that this was deleted */
-					if (_pCurProp->pCmpResult->pCmpRef != NULL) {
-						_pCurProp->pCmpResult->pCmpRef->pCmpRef = NULL;
-					} else {
-						::CloseHandle(_pCurProp->pCmpResult->hFile);
-						::DeleteFile(_pCurProp->pCmpResult->szFileName);
-					}
-    				delete _pCurProp->pCmpResult;
-					_pCurProp->pCmpResult = NULL;
+		//if(_pCurProp)
+		if (pCmpResult == NULL) {
+			if (_pCurProp->pCmpResult != NULL) {
+				/* if a reference exist mark in them that this was deleted */
+				if (_pCurProp->pCmpResult->pCmpRef != NULL) {
+					_pCurProp->pCmpResult->pCmpRef->pCmpRef = NULL;
+				} else {
+					::CloseHandle(_pCurProp->pCmpResult->hFile);
+					::DeleteFile(_pCurProp->pCmpResult->szFileName);
 				}
-			} else {
-				/* this avoids resource leak */
-				if (_pCurProp->pCmpResult != NULL) {
-					if (_pCurProp->pCmpResult->pCmpRef != NULL)
-						_pCurProp->pCmpResult->pCmpRef->pCmpRef = NULL;
-					delete _pCurProp->pCmpResult;
-				}
-				_pCurProp->pCmpResult = pCmpResult;
-				_pCurProp->pCmpResult->pCmpRef = pCmpRef;
+    			delete _pCurProp->pCmpResult;
+				_pCurProp->pCmpResult = NULL;
 			}
-			::RedrawWindow(_hListCtrl, NULL, NULL, TRUE);
+		} else {
+			/* this avoids resource leak */
+			if (_pCurProp->pCmpResult != NULL) {
+				if (_pCurProp->pCmpResult->pCmpRef != NULL)
+					_pCurProp->pCmpResult->pCmpRef->pCmpRef = NULL;
+				delete _pCurProp->pCmpResult;
+			}
+			_pCurProp->pCmpResult = pCmpResult;
+			_pCurProp->pCmpResult->pCmpRef = pCmpRef;
 		}
+		::RedrawWindow(_hListCtrl, NULL, NULL, TRUE);
 	}
 
 	void SetStatusBar(void);
@@ -597,7 +596,7 @@ private:
 	{
 		INT		i		= 0;
 		INT		j		= 0;
-		LONG_PTR	lAddr	= 0;
+		LONG	lAddr	= 0;
 
 		/* return on empty list */
 		if (d > h || d < 0)

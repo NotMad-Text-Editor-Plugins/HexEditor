@@ -150,6 +150,10 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 						if (lvItem->mask & LVIF_TEXT)
 						{
 							ReadArrayToList(text, lvItem->iItem ,lvItem->iSubItem);
+							//if(_pCurProp&&lvItem->iSubItem == DUMP_FIELD) {
+							//	UINT	posBeg = lvItem->iItem * VIEW_ROW;
+							//	text[17]='\0';
+							//}
 #ifdef UNICODE
 							static WCHAR wText[129] = _T("\0");
 							::MultiByteToWideChar(CP_ACP, 0, text, -1, wText, 129);
@@ -195,8 +199,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 										_uLastVisSubItem = uSubItem;
 									}
 								}
-								//hwnd?
-								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG_PTR)(CDRF_NOTIFYITEMDRAW|CDRF_NOTIFYPOSTPAINT));
+								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG)(CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT));
 								return TRUE;
 
 							case CDDS_ITEMPREPAINT:
@@ -214,7 +217,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
                                         pCmpResult->offCmpCache = (offCmpCache < 0 ? 0 : offCmpCache);
 										pCmpResult->lenCmpCache = CACHE_SIZE;
 
-										::SetFilePointer(pCmpResult->hFile, (LONG_PTR)pCmpResult->offCmpCache, NULL, FILE_BEGIN);
+										::SetFilePointer(pCmpResult->hFile, (LONG)pCmpResult->offCmpCache, NULL, FILE_BEGIN);
 										BOOL ret = ::ReadFile(pCmpResult->hFile, pCmpResult->cmpCache, CACHE_SIZE, &hasRead, NULL);
 										if ((ret == 0) && (GetLastError() != ERROR_HANDLE_EOF)) {
 											SetCompareResult(NULL);
@@ -271,7 +274,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
                                 /* destroy background brush */
 							    ::DeleteObject(_hBkBrush);
 
-								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG_PTR)(CDRF_SKIPDEFAULT));
+								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG)(CDRF_SKIPDEFAULT));
 								return TRUE;
 
 							case CDDS_POSTPAINT:
@@ -289,8 +292,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 								_uFirstVisSubItem = 0;
 								_uLastVisSubItem = 0;
 
-								//hwnd
-								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG_PTR)(CDRF_SKIPDEFAULT));
+								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG)(CDRF_SKIPDEFAULT));
 								return TRUE;
 							}
 							default:
@@ -1032,7 +1034,7 @@ void HexEdit::UpdateHeader(BOOL isFirstTime)
 		while (ListView_DeleteColumn(_hListCtrl, 0));
 
 		LVCOLUMN ColSetupTermin = {LVCF_FMT | LVCF_WIDTH | LVCF_TEXT, LVCFMT_LEFT, 
-			(INT)(size.cx * (LONG_PTR)(_pCurProp->addWidth + 1)), _T("Address"), 7, 0};
+			(INT)(size.cx * (LONG)(_pCurProp->addWidth + 1)), _T("Address"), 7, 0};
 		if (_pCurProp->addWidth < 8)
 			ColSetupTermin.pszText = _T("Add");
 		ListView_InsertColumn(_hListCtrl, 0, &ColSetupTermin);
@@ -1799,6 +1801,8 @@ void HexEdit::ReadArrayToList(LPSTR text, INT iItem, INT iSubItem)
 		if ((posBeg + VIEW_ROW) <= _currLength)
 		{
 			ScintillaGetText(_hParentHandle, text, posBeg, posBeg + VIEW_ROW);
+			//ScintillaGetText(_hParentHandle, text, posBeg, _currLength);
+			//text[posBeg + VIEW_ROW]='\0';
 			DumpConvert(text, VIEW_ROW);
 		}
 		else
@@ -1887,8 +1891,10 @@ void HexEdit::DumpConvert(LPSTR text, UINT length)
 	if (_pCurProp->isLittle == FALSE)
 	{
 		/* i must be unsigned */
-		for (INT i = length - 1; i >= 0; --i)
+		for (int i = length - 1; i >= 0; --i)
 		{
+			//if((UINT)text[i]<0x20)
+			//	text[i] = (char)0x2e;
 			text[i] = ascii[(UCHAR)text[i]];
 		}
 	}
@@ -1900,6 +1906,8 @@ void HexEdit::DumpConvert(LPSTR text, UINT length)
 		/* i must be unsigned */
 		for (UINT i = 0; i < length; i++)
 		{
+			//if((UINT)text[i]<0x20)
+			//	temp[i] = (char)0x2e;
 			temp[i] = ascii[(UCHAR)text[i]];
 		}
 
@@ -3813,7 +3821,7 @@ void HexEdit::NextBookmark(void)
 	if (vecSize == 0)
 		return;
 
-	LONG_PTR	lAdrs	= _pCurProp->vBookmarks[0].lAddress;
+	LONG	lAdrs	= _pCurProp->vBookmarks[0].lAddress;
 
 	_pCurProp->cursorPos			= 0;
 	if (_pCurProp->editType == HEX_EDIT_HEX)
@@ -3839,7 +3847,7 @@ void HexEdit::PrevBookmark(void)
 	if (vecSize == 0)
 		return;
 
-	LONG_PTR	lAdrs	= _pCurProp->vBookmarks[vecSize-1].lAddress;
+	LONG	lAdrs	= _pCurProp->vBookmarks[vecSize-1].lAddress;
 
 	_pCurProp->cursorPos			= 0;
 	if (_pCurProp->editType == HEX_EDIT_HEX)
@@ -3907,7 +3915,7 @@ void HexEdit::UpdateBookmarks(UINT firstAdd, INT length)
 
 	for (UINT i = 0; i < _pCurProp->vBookmarks.size(); i++)
 	{
-		LONG_PTR	addressTest = _pCurProp->vBookmarks[i].lAddress;
+		LONG	addressTest = _pCurProp->vBookmarks[i].lAddress;
 		UINT	iItemTest	= _pCurProp->vBookmarks[i].iItem;
 		if ((UINT)_pCurProp->vBookmarks[i].lAddress >= firstAdd)
 		{
@@ -4328,9 +4336,9 @@ void HexEdit::ConvertSelNppToHEX1(void)
 	INT		selEnd		= GetCurrentPos();
 	INT		offset		= 0;
 
-	//UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
-	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_GETBUFFERENCODING, 
-		::SendMessage(_nppData._nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0), 0);
+	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
+	//UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_GETBUFFERENCODING, 
+	//	::SendMessage(_nppData._nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0), 0);
 
 	if ((_pCurProp->isLittle == FALSE) || (_pCurProp->bits == HEX_BYTE))
 	{

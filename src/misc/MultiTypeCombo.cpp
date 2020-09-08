@@ -123,7 +123,7 @@ void MultiTypeCombo::addText(tComboInfo info)
 	{
 		if (memcmp(info.text, _comboItems[i].text, info.length) == 0)
 		{
-			hasFoundOn = (LONG_PTR)count - (LONG_PTR)i - 1;
+			hasFoundOn = (LONG)count - (LONG)i - 1;
 		}
 	}
 
