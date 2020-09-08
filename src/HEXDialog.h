@@ -384,6 +384,7 @@ private:
 	void UpdateBookmarks(UINT firstElem, INT length);
 
 	void ConvertSelNppToHEX(void);
+	void ConvertSelNppToHEX1(void);
 	void ConvertSelHEXToNpp(void);
 
 	INT CalcStride(INT posBeg, INT posEnd)
