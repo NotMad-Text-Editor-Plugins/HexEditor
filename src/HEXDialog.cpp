@@ -4327,7 +4327,9 @@ void HexEdit::ConvertSelHEXToNpp(void)
 	INT		selEnd		= GetCurrentPos();
 	INT		offset		= 0;
 
-	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
+	//UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
+	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_GETBUFFERENCODING, 
+		::SendMessage(_nppData._nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0), 0);
 
 	if ((_pCurProp->isLittle == FALSE) || (_pCurProp->bits == HEX_BYTE))
 	{
