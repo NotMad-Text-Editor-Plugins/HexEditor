@@ -185,10 +185,6 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 						if (lvItem->mask & LVIF_TEXT)
 						{
 							ReadArrayToList(text, lvItem->iItem ,lvItem->iSubItem);
-							//if(_pCurProp&&lvItem->iSubItem == DUMP_FIELD) {
-							//	UINT	posBeg = lvItem->iItem * VIEW_ROW;
-							//	text[17]='\0';
-							//}
 #ifdef UNICODE
 							static WCHAR wText[129] = _T("\0");
 							::MultiByteToWideChar(CP_ACP, 0, text, -1, wText, 129);
@@ -4369,9 +4365,9 @@ void HexEdit::ConvertSelNppToHEX1(void)
 	INT		selEnd		= GetCurrentPos();
 	INT		offset		= 0;
 
-	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
-	//UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_GETBUFFERENCODING, 
-	//	::SendMessage(_nppData._nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0), 0);
+	//UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
+	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_GETBUFFERENCODING, 
+		::SendMessage(_nppData._nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0), 0);
 
 	if ((_pCurProp->isLittle == FALSE) || (_pCurProp->bits == HEX_BYTE))
 	{

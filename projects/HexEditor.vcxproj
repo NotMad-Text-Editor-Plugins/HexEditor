@@ -173,7 +173,7 @@
       <PreprocessorDefinitions>WIN32;NDEBUG;_WINDOWS;_USRDLL;HEXEDITOR_EXPORTS;WIN64;_WIN64=1;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <StringPooling>
       </StringPooling>
-      <RuntimeLibrary>MultiThreaded</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <PrecompiledHeader>
       </PrecompiledHeader>
@@ -191,7 +191,8 @@
       <MapFileName>
       </MapFileName>
       <SubSystem>Windows</SubSystem>
-      <StackReserveSize>0</StackReserveSize>
+      <StackReserveSize>
+      </StackReserveSize>
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <ImportLibrary>$(OutDir)HexEditor.lib</ImportLibrary>

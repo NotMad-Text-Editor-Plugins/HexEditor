@@ -305,7 +305,8 @@ public:
 
 	void SetCompareResult(tCmpResult* pCmpResult, tCmpResult* pCmpRef = NULL)
 	{
-		//if(_pCurProp)
+		if(!_pCurProp) 
+			return;
 		if (pCmpResult == NULL) {
 			if (_pCurProp->pCmpResult != NULL) {
 				/* if a reference exist mark in them that this was deleted */
