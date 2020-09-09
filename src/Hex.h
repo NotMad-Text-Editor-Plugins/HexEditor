@@ -166,7 +166,7 @@ typedef struct tHexProp
 	BOOL				isModified;				// stores the modification state
 	BOOL				isVisible;				// is current file visible
 	INT					fontZoom;				// view zoom factor
-	UINT				addWidth;				// char width of address field
+	UINT				addWidth=0;				// char width of address field
 	SHORT				columns;				// number of columns
 	SHORT				bits;					// number of bits used
 	BOOL				isBin;					// shows in binary
@@ -180,7 +180,7 @@ typedef struct tHexProp
 	UINT				cursorItem;				// (selection end) / (pos) item
 	UINT				cursorSubItem;			// (selection end) / (pos) sub item
 	UINT				cursorPos;				// cursor position
-	UINT				anchorItem;				// selection start item
+	UINT				anchorItem=0;				// selection start item
 	UINT				anchorSubItem;			// selection start sub item
 	UINT				anchorPos;				// start position edit position
 

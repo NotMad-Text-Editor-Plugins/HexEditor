@@ -53,6 +53,41 @@ HexEdit::HexEdit(void)
 	_oldCursorCurPos	= 0;
 	_uFirstVisSubItem	= 0;
 	_uLastVisSubItem	= 0;
+
+
+	_openDoc=0;
+	_lastOpenHex=0;
+	_currLength=0;
+
+	_pCurProp;
+	_hexProp;
+
+	
+	_onChar=0;
+	_isCurOn=0;
+	_fontSize=0;
+	_x=0;
+	_y=0;
+
+	_iOldHorDiff=0;
+	_iOldVerDiff=0;
+	_oldAnchorItem=0;
+	_oldAnchorSubItem=0;
+	_oldAnchorCurPos=0;
+	_oldCursorItem=0;
+	_oldCursorSubItem=0;
+	_oldCursorCurPos=0;
+
+	_iUnReCnt=0;
+	_uUnReCode=0;
+	_uFirstPos=0;
+	_uLastPos=0;
+	_uLastLength=0;
+
+	
+	_isLBtnDown=0;
+	_isRBtnDown=0;
+	_isWheel=0;
 }
 
 HexEdit::~HexEdit(void)
@@ -497,7 +532,7 @@ LRESULT HexEdit::runProcList(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
 					_pCurProp->editType = (info.iSubItem == DUMP_FIELD)? HEX_EDIT_ASCII : HEX_EDIT_HEX;
 
 					/* keep sure that selection is off */
-					if (!0x80 & ::GetKeyState(VK_SHIFT)) {
+					if (!(0x80 & ::GetKeyState(VK_SHIFT))) {
 						_pCurProp->isSel	= FALSE;
 					}
 
@@ -1494,10 +1529,10 @@ void HexEdit::Paste(void)
 
 			/* remove resources */
 			if (buffer != NULL) {
-				delete buffer;
+				delete []buffer;
 			}
 			if (target != NULL) {
-				delete target;
+				delete []target;
 			}
 		}
 		else
@@ -1893,22 +1928,20 @@ void HexEdit::DumpConvert(LPSTR text, UINT length)
 		/* i must be unsigned */
 		for (int i = length - 1; i >= 0; --i)
 		{
-			//if((UINT)text[i]<0x20)
-			//	text[i] = (char)0x2e;
-			text[i] = ascii[(UCHAR)text[i]];
+			if((UINT)text[i]<0x20)
+				text[i] = (char)0x2e;
 		}
 	}
 	else
 	{
-		CHAR	temp[129];
+		CHAR	temp[129]={0};
 		LPSTR	pText	= text;
 
 		/* i must be unsigned */
 		for (UINT i = 0; i < length; i++)
 		{
-			//if((UINT)text[i]<0x20)
-			//	temp[i] = (char)0x2e;
-			temp[i] = ascii[(UCHAR)text[i]];
+			if((UINT)text[i]<0x20)
+				temp[i] = (char)0x2e;
 		}
 
 		UINT offset = length % _pCurProp->bits;
@@ -3164,7 +3197,7 @@ BOOL HexEdit::OnCharDump(WPARAM wParam, LPARAM lParam)
 void HexEdit::DrawDumpText(HDC hDc, DWORD item, INT subItem)
 {
 	RECT		rc;
-	TCHAR		text[129];
+	TCHAR		text[129]={0};
 	RECT		rcCursor	= {0};
 	SIZE		size		= {0};
 	UINT		diff		= VIEW_ROW;
