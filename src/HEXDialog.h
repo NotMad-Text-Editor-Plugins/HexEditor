@@ -334,6 +334,9 @@ public:
 
 	void SetStatusBar(void);
 
+	char				_historyDirty=0;
+	bool				_historyClean=0;
+	bool				_TB_OBS_UNDO=0;
 protected :
 	INT_PTR CALLBACK run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam);
 

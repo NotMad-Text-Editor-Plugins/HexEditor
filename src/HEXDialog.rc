@@ -427,6 +427,8 @@ END
 //
 
 IDB_TB_HEX              BITMAP                  "..\\res\\hex.bmp"
+
+IDI_TB_HEX              ICON                  "..\\res\\hex.ico"
 #endif    // German (Germany) resources
 /////////////////////////////////////////////////////////////////////////////
 

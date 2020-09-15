@@ -88,6 +88,8 @@ HexEdit::HexEdit(void)
 	_isLBtnDown=0;
 	_isRBtnDown=0;
 	_isWheel=0;
+
+	_historyClean=0;
 }
 
 HexEdit::~HexEdit(void)
@@ -923,6 +925,11 @@ void HexEdit::UpdateDocs(LPCTSTR* pFiles, UINT numFiles, INT openDoc)
 }
 
 
+extern bool bEditable;
+extern NppData			nppData;
+
+HWND hToolbar;
+
 void HexEdit::doDialog(BOOL toggle)
 {
 	if (_pCurProp == NULL)
@@ -931,6 +938,7 @@ void HexEdit::doDialog(BOOL toggle)
 	/* toggle view if user requested */
 	if (toggle == TRUE)
 	{
+		bEditable=0;
 		_pCurProp->isVisible ^= TRUE;
 
 		/* get modification state */
@@ -992,6 +1000,12 @@ void HexEdit::doDialog(BOOL toggle)
 	if ((_lastOpenHex != _openDoc) && (_pCurProp->isVisible == TRUE)) {
 		InvalidateNotepad();
 		_lastOpenHex = _openDoc;
+	}
+
+	if(toggle) {
+		_TB_OBS_UNDO=1;
+		_historyClean=1;
+		bEditable=1;
 	}
 }
 

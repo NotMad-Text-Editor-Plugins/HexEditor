@@ -61,7 +61,7 @@ HANDLE			g_hModule;
 HWND			g_HSource;
 HWND			g_hFindRepDlg;
 FuncItem		funcItem[nbFunc];
-toolbarIcons	g_TBHex;
+toolbarIcons	g_TBHex{0,0,0x666,0,IDI_TB_HEX,0,0,IDB_TB_HEX};
 
 
 /* create classes */
@@ -203,6 +203,8 @@ extern "C" __declspec(dllexport) FuncItem * getFuncsArray(INT *nbF)
 	return funcItem;
 }
 
+bool bEditable=0;
+
 /***
  *	beNotification()
  *
@@ -225,6 +227,38 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 					tHexProp	hexProp1	= hexEdit1.GetHexProp();
 					tHexProp	hexProp2	= hexEdit2.GetHexProp();
 					INT			length		= notifyCode->length;
+
+					//int clean = (hexEdit2._historyClean<<1)|hexEdit1._historyClean;
+					//
+					//if(clean) {
+					//	::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, clean, 0);
+					//}
+
+					if(bEditable && notifyCode->length>0) {
+						if(pCurHexEdit->_historyClean) {
+							//::SendMessage(nppData._nppHandle,NPPM_OBSCUREUNDOICON, 0, 0);
+							//::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, pCurHexEdit==&hexEdit1?1:2, 1);
+							int val = pCurHexEdit->GetHexProp().isVisible?1:2;
+							pCurHexEdit->_historyDirty|=val;
+							pCurHexEdit->_TB_OBS_UNDO=false;
+							//TCHAR buffer[100]={0};
+							//wsprintf(buffer,TEXT("position=%d"), pCurHexEdit->_historyDirty);
+							//::MessageBox(NULL, buffer, TEXT(""), MB_OK);
+
+							if(pCurHexEdit->_historyDirty>=3) {
+								::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, pCurHexEdit==&hexEdit1?1:2, 1);
+								pCurHexEdit->_historyDirty=0;
+
+								//::MessageBox(NULL, TEXT("_historyClean"), TEXT(""), MB_OK);
+							}
+							pCurHexEdit->_historyDirty|=val;
+							pCurHexEdit->_historyClean=0;
+
+						}
+					}
+
+
+
 
 					if ((hexProp1.szFileName != NULL) && (hexProp2.szFileName != NULL) &&
 						(_tcscmp(hexProp1.szFileName, hexProp2.szFileName) == 0))
@@ -268,8 +302,17 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 				/* change menu language */
 				NLChangeNppMenu((HINSTANCE)g_hModule, nppData._nppHandle, PLUGIN_NAME, funcItem, nbFunc);
 
-				g_TBHex.hToolbarBmp = (HBITMAP)::LoadImage((HINSTANCE)g_hModule, MAKEINTRESOURCE(IDB_TB_HEX), IMAGE_BITMAP, 0, 0, (LR_DEFAULTSIZE | LR_LOADMAP3DCOLORS));
+				auto HRO = (HINSTANCE)g_hModule;
+
+				long version = ::SendMessage(nppData._nppHandle, NPPM_GETNOTMADVERSION, 0, 0);
+
+				bool legacy = version<0x666;
+
+				g_TBHex.HRO = HRO;
+				if(legacy)g_TBHex.hToolbarBmp = (HBITMAP)::LoadImage((HINSTANCE)g_hModule, MAKEINTRESOURCE(IDB_TB_HEX), IMAGE_BITMAP, 0, 0, (LR_DEFAULTSIZE | LR_LOADMAP3DCOLORS));
 				::SendMessage(nppData._nppHandle, NPPM_ADDTOOLBARICON, (WPARAM)funcItem[0]._cmdID, (LPARAM)&g_TBHex);
+				
+				
 				break;
 			}
 			case NPPN_READY:
@@ -283,6 +326,7 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 			case NPPN_FILECLOSED:
 			{
 				SystemUpdate();
+				pCurHexEdit->_TB_OBS_UNDO=false;
 				pCurHexEdit->doDialog();
 				break;
 			}
@@ -702,7 +746,9 @@ void openHelpDlg(void)
 LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
 	LRESULT			ret = 0;
-
+	if(!IsWindowVisible(hWnd)) {
+		//return ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
+	}
 	switch (message)
 	{
 		case WM_ACTIVATE:
@@ -823,6 +869,14 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 					case IDM_EDIT_RMV_TAB:
 					case IDM_EDIT_STREAM_COMMENT:
 						return TRUE;
+					case IDM_EDIT_UNDO:
+					case IDM_EDIT_REDO:
+						if(pCurHexEdit->_TB_OBS_UNDO) {
+
+							::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("Rejected……"));
+
+							return TRUE;
+						}
 					default:
 						break;
 				}
@@ -832,6 +886,7 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 			{
 				case IDM_FILE_RELOAD:
 				{
+					if (HIWORD(wParam) != SCEN_SETFOCUS)
 					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
 					pCurHexEdit->SetCompareResult(NULL);
 					break;
@@ -1020,36 +1075,32 @@ void SystemUpdate(void)
 		INT			i = 0;
 		INT			docCnt1;
 		INT			docCnt2;
-		LPCTSTR		*fileNames1;
-		LPCTSTR		*fileNames2;
+		INT			docCnt;
+		LPCTSTR		*fileNames;
 		BOOL		isAllocOk = TRUE;
 		
 		/* update doc information */
 		docCnt1		= (INT)::SendMessage(nppData._nppHandle, NPPM_GETNBOPENFILES, 0, (LPARAM)PRIMARY_VIEW);
 		docCnt2		= (INT)::SendMessage(nppData._nppHandle, NPPM_GETNBOPENFILES, 0, (LPARAM)SECOND_VIEW);
-		fileNames1	= (LPCTSTR*)new LPTSTR[docCnt1];
-		fileNames2	= (LPCTSTR*)new LPTSTR[docCnt2];
+		fileNames	= (LPCTSTR*)new LPTSTR[docCnt=max(docCnt1, docCnt2)];
 
-		if ((fileNames1 != NULL) && (fileNames2 != NULL))
+		if (fileNames)
 		{
-			for (i = 0; (i < docCnt1) && (isAllocOk == TRUE); i++) {
-				fileNames1[i] = (LPTSTR)new TCHAR[MAX_PATH];
-				if (fileNames1[i] == NULL)
+			for (i = 0; i < docCnt && isAllocOk; i++) {
+				fileNames[i] = (LPTSTR)new TCHAR[MAX_PATH];
+				if (fileNames[i] == NULL) {
 					isAllocOk = FALSE;
-			}
-			for (i = 0; (i < docCnt2) && (isAllocOk == TRUE); i++) {
-				fileNames2[i] = (LPTSTR)new TCHAR[MAX_PATH];
-				if (fileNames2[i] == NULL)
-					isAllocOk = FALSE;
+					break;
+				}
 			}
 
-			if (isAllocOk == TRUE)
+			if (isAllocOk)
 			{
-				::SendMessage(nppData._nppHandle, NPPM_GETOPENFILENAMESPRIMARY, (WPARAM)fileNames1, (LPARAM)docCnt1);
-				hexEdit1.UpdateDocs(fileNames1, docCnt1, openDoc1);
+				::SendMessage(nppData._nppHandle, NPPM_GETOPENFILENAMESPRIMARY, (WPARAM)fileNames, (LPARAM)docCnt1);
+				hexEdit1.UpdateDocs(fileNames, docCnt1, openDoc1);
 
-				::SendMessage(nppData._nppHandle, NPPM_GETOPENFILENAMESSECOND, (WPARAM)fileNames2, (LPARAM)docCnt2);
-				hexEdit2.UpdateDocs(fileNames2, docCnt2, openDoc2);
+				::SendMessage(nppData._nppHandle, NPPM_GETOPENFILENAMESSECOND, (WPARAM)fileNames, (LPARAM)docCnt2);
+				hexEdit2.UpdateDocs(fileNames, docCnt2, openDoc2);
 
 				/* update edit */
 				if (currentSC == MAIN_VIEW)
@@ -1061,20 +1112,10 @@ void SystemUpdate(void)
 				setMenu();
 			}
 
-			if (fileNames1 != NULL)
-			{
-				for (i = 0; i < docCnt1; i++)
-					if (fileNames1[i] != NULL)
-						delete [] fileNames1[i];
-				delete [] fileNames1;
-			}
-			if (fileNames2 != NULL)
-			{
-				for (i = 0; i < docCnt2; i++)
-					if (fileNames2[i] != NULL)
-						delete [] fileNames2[i];
-				delete [] fileNames2;
-			}
+			for (i = 0; i < docCnt; i++)
+				if (fileNames[i])
+					delete [] fileNames[i];
+			delete [] fileNames;
 		}
 	}
 	DialogUpdate();
