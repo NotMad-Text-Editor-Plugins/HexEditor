@@ -290,6 +290,7 @@ public:
 
 	void ClearAllCompareResults()
 	{
+		//::MessageBox(NULL, TEXT("ClearAllCompareResults"), TEXT(""), MB_OK);
 		for (size_t i = 0; i < _hexProp.size(); i++) {
 			if (_hexProp[i].pCmpResult != NULL) {
 				if (_hexProp[i].pCmpResult->pCmpRef != NULL) {

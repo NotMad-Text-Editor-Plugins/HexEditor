@@ -158,8 +158,8 @@ BOOL APIENTRY DllMain( HANDLE hModule,
 			break;
 			
 		case DLL_THREAD_DETACH:
-			hexEdit1.ClearAllCompareResults();
-			hexEdit2.ClearAllCompareResults();
+			//hexEdit1.ClearAllCompareResults();
+			//hexEdit2.ClearAllCompareResults();
 			break;
     }
 
@@ -1052,6 +1052,8 @@ void SystemUpdate(void)
 	if (isNotepadCreated == FALSE)
 		return;
 
+	//if (1) return;
+
 	OutputDebugString(_T("SystemUpdate\n"));
 
 	UINT		oldSC		= currentSC;
@@ -1118,7 +1120,7 @@ void SystemUpdate(void)
 			delete [] fileNames;
 		}
 	}
-	DialogUpdate();
+	//DialogUpdate();
 }
 
 void ActivateWindow(void)
@@ -1489,10 +1491,13 @@ void DoCompare(void)
 	::PathRemoveExtension(szFile);
 	_tcscat(cmpResult.szFileName, szFile);
 	_tcscat(cmpResult.szFileName, _T(".cmp"));
+
 	cmpResult.hFile = ::CreateFile(cmpResult.szFileName, 
 		GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 
 		NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
-		
+
+	//d::MessageBox(NULL, cmpResult.szFileName, TEXT(""), MB_OK);
+
 	if (cmpResult.hFile != INVALID_HANDLE_VALUE)
 	{
 		LPSTR	buffer1 = (LPSTR)new CHAR[COMP_BLOCK+1];
@@ -1549,7 +1554,7 @@ void DoCompare(void)
 			curPos += posSrc;
 		}
 
-		if (doMatch == TRUE)
+		if (0)
 		{
 			if (NLMessageBox((HINSTANCE)g_hModule, nppData._nppHandle, _T("MsgBox CompMatch"), MB_OK) == FALSE)
 				::MessageBox(nppData._nppHandle, _T("Files Match."), _T("Hex-Editor Compare"), MB_OK);

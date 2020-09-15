@@ -232,7 +232,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 										_uLastVisSubItem = uSubItem;
 									}
 								}
-								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG)(CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT));
+								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG_PTR)(CDRF_NOTIFYITEMDRAW | CDRF_NOTIFYPOSTPAINT));
 								return TRUE;
 
 							case CDDS_ITEMPREPAINT:
@@ -307,7 +307,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
                                 /* destroy background brush */
 							    ::DeleteObject(_hBkBrush);
 
-								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG)(CDRF_SKIPDEFAULT));
+								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG_PTR)(CDRF_SKIPDEFAULT));
 								return TRUE;
 
 							case CDDS_POSTPAINT:
@@ -325,7 +325,7 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 								_uFirstVisSubItem = 0;
 								_uLastVisSubItem = 0;
 
-								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG)(CDRF_SKIPDEFAULT));
+								SetWindowLongPtr(_hSelf, DWLP_MSGRESULT, (LONG_PTR)(CDRF_SKIPDEFAULT));
 								return TRUE;
 							}
 							default:
@@ -829,6 +829,7 @@ void HexEdit::UpdateDocs(LPCTSTR* pFiles, UINT numFiles, INT openDoc)
 	vector<tHexProp>	tmpList;
 
 	/* attach (un)known files */
+	//筛选当前编辑器视图内存在的文件。
 	for (size_t i = 0; i < numFiles; i++)
 	{
 		BOOL isCopy = FALSE;
@@ -865,11 +866,13 @@ void HexEdit::UpdateDocs(LPCTSTR* pFiles, UINT numFiles, INT openDoc)
 	}
 
 	/* delete possible allocated compare buffer */
+	//同步后，有文件关闭
+	if(0) //??????
 	if (numFiles < _hexProp.size())
 	{
 		for (size_t i = 0; i < _hexProp.size(); i++) {
 			BOOL isCopy = FALSE;
-			for (size_t j = 0; j < numFiles; j++) {
+			for (size_t j = 0; j < numFiles; j++) { //记录的文件_hexProp可在现存文件numFiles中找到，不做任何操作。
 				if (_tcsicmp(_hexProp[i].szFileName, tmpList[j].szFileName) == 0) {
 					isCopy = TRUE;
 					break;
@@ -883,6 +886,7 @@ void HexEdit::UpdateDocs(LPCTSTR* pFiles, UINT numFiles, INT openDoc)
 
 	/* copy new list into current list */
 	_hexProp = tmpList;
+	//todo:: 用map代替列表。
 
 	if (_openDoc != openDoc)
 	{

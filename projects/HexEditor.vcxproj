@@ -96,7 +96,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(DLLOU_)</OutputFile>
+      <OutputFile>$(DLLOU_32)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <ProgramDatabaseFile>$(OutDir)HexEditor.pdb</ProgramDatabaseFile>
       <SubSystem>Windows</SubSystem>
@@ -147,7 +147,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>shlwapi.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(DLLOU_)</OutputFile>
+      <OutputFile>$(DLLOU_32)</OutputFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <GenerateMapFile>false</GenerateMapFile>
       <MapFileName>
