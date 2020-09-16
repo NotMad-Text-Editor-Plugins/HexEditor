@@ -67,9 +67,9 @@ public:
 		}
 	};
 
-   	void doDialog(BOOL toggle = FALSE);
+   	void doDialog(BOOL toggle=FALSE, BOOL docUpdate=FALSE);
 
-	void UpdateDocs(TCHAR* currFileName);
+	void UpdateDocs(TCHAR* currFileName, BOOL docUpdate);
 
 	void FileNameChanged(LPTSTR newPath)
 	{
@@ -665,8 +665,6 @@ private:
 	/******************************* virables of list *********************************/
 
 	/* current file */
-	INT					_openDoc;
-	INT					_lastOpenHex;
 	UINT				_currLength;
 
 	/* properties of open files */

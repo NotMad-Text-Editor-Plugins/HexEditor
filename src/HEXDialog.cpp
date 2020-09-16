@@ -36,8 +36,6 @@ HexEdit::HexEdit(void)
 	_pCurProp			= NULL;
 	_onChar				= FALSE;
 	_isCurOn			= FALSE;
-	_openDoc			= -1;
-	_lastOpenHex		= -1;
 	_isLBtnDown			= FALSE;
 	_isRBtnDown			= FALSE;
 	_isWheel			= FALSE;
@@ -54,40 +52,7 @@ HexEdit::HexEdit(void)
 	_uFirstVisSubItem	= 0;
 	_uLastVisSubItem	= 0;
 
-
-	_openDoc=0;
-	_lastOpenHex=0;
 	_currLength=0;
-
-	_pCurProp;
-	_hexProp;
-
-	
-	_onChar=0;
-	_isCurOn=0;
-	_fontSize=0;
-	_x=0;
-	_y=0;
-
-	_iOldHorDiff=0;
-	_iOldVerDiff=0;
-	_oldAnchorItem=0;
-	_oldAnchorSubItem=0;
-	_oldAnchorCurPos=0;
-	_oldCursorItem=0;
-	_oldCursorSubItem=0;
-	_oldCursorCurPos=0;
-
-	_iUnReCnt=0;
-	_uUnReCode=0;
-	_uFirstPos=0;
-	_uLastPos=0;
-	_uLastLength=0;
-
-	
-	_isLBtnDown=0;
-	_isRBtnDown=0;
-	_isWheel=0;
 
 	_historyClean=0;
 }
@@ -822,7 +787,7 @@ LRESULT HexEdit::runProcList(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
 }
 
 
-void HexEdit::UpdateDocs(TCHAR* currFileName)
+void HexEdit::UpdateDocs(TCHAR* currFileName, BOOL docUpdate)
 {
 	/* update current visible line */
 	GetLineVis();
@@ -835,7 +800,7 @@ void HexEdit::UpdateDocs(TCHAR* currFileName)
 			if (_pCurProp->isVisible) {
 				UpdateHeader(TRUE);
 			}
-			doDialog();
+			doDialog(false, docUpdate);
 		}
 	} else {
 		/* attach new file */
@@ -849,7 +814,7 @@ void HexEdit::UpdateDocs(TCHAR* currFileName)
 		_hexProp.insert(pair<TCHAR*, tHexProp*>(prop.szFileName, &prop));
 		//_hexProp.insert_or_assign(prop.szFileName, prop);
 		// have to hide hex menus.
-		doDialog();
+		doDialog(false, docUpdate);
 	}
 }
 
@@ -859,7 +824,7 @@ extern NppData			nppData;
 
 HWND hToolbar;
 
-void HexEdit::doDialog(BOOL toggle)
+void HexEdit::doDialog(BOOL toggle, BOOL docUpdate)
 {
 	if (_pCurProp == NULL)
 		return;
@@ -929,9 +894,8 @@ void HexEdit::doDialog(BOOL toggle)
 	display(_pCurProp->isVisible == TRUE);
 
 	/* set possible hidden subitem in focus */
-	if ((_lastOpenHex != _openDoc) && (_pCurProp->isVisible == TRUE)) {
+	if (_pCurProp->isVisible && docUpdate) {
 		InvalidateNotepad();
-		_lastOpenHex = _openDoc;
 	}
 
 	if(toggle) {
@@ -944,47 +908,38 @@ void HexEdit::doDialog(BOOL toggle)
 
 void HexEdit::MoveView(void)
 {
-	if (_openDoc == -1)
+	if (_pCurProp && _pCurProp->isVisible)
 	{
+		RECT	rc;
+			
+		::GetWindowRect(_hParentHandle, &rc);
+		ScreenToClient(_nppData._nppHandle, &rc);
+
+		INT	iNewHorDiff = rc.right - rc.left;
+		INT	iNewVerDiff = rc.bottom - rc.top;
+
+		::SetWindowPos(_hSelf, NULL, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, FALSE);
+		if (!isVisible()) {
+			::RedrawWindow(_hListCtrl, NULL, NULL, RDW_INVALIDATE);
+			::SetFocus(_hListCtrl);
+		}
+		else if ((abs(iNewHorDiff - _iOldHorDiff) > 50) ||
+			(abs(iNewVerDiff - _iOldVerDiff) > 50)) {
+			::RedrawWindow(_hListCtrl, NULL, NULL, RDW_INVALIDATE);
+		}
+		::ShowWindow(_hSelf, SW_SHOW);
+		::ShowWindow(_hListCtrl, SW_SHOW);
 		::ShowWindow(_hParentHandle, SW_HIDE);
+
+		_iOldHorDiff = iNewHorDiff;
+		_iOldVerDiff = iNewVerDiff;
+	}
+	else if (!::IsWindowVisible(_hParentHandle))
+	{
+		::ShowWindow(_hParentHandle, SW_SHOW);
+		::SetFocus(_hParentHandle);
 		::ShowWindow(_hSelf, SW_HIDE);
 		::ShowWindow(_hListCtrl, SW_HIDE);
-	}
-	else
-	{
-		if ((_pCurProp != NULL) && (_pCurProp->isVisible == TRUE))
-		{
-			RECT	rc;
-			
-			::GetWindowRect(_hParentHandle, &rc);
-			ScreenToClient(_nppData._nppHandle, &rc);
-
-			INT	iNewHorDiff = rc.right - rc.left;
-			INT	iNewVerDiff = rc.bottom - rc.top;
-
-			::SetWindowPos(_hSelf, NULL, rc.left, rc.top, rc.right-rc.left, rc.bottom-rc.top, FALSE);
-			if (!isVisible()) {
-				::RedrawWindow(_hListCtrl, NULL, NULL, RDW_INVALIDATE);
-				::SetFocus(_hListCtrl);
-			}
-			else if ((abs(iNewHorDiff - _iOldHorDiff) > 50) ||
-				(abs(iNewVerDiff - _iOldVerDiff) > 50)) {
-				::RedrawWindow(_hListCtrl, NULL, NULL, RDW_INVALIDATE);
-			}
-			::ShowWindow(_hSelf, SW_SHOW);
-			::ShowWindow(_hListCtrl, SW_SHOW);
-			::ShowWindow(_hParentHandle, SW_HIDE);
-
-			_iOldHorDiff = iNewHorDiff;
-			_iOldVerDiff = iNewVerDiff;
-		}
-		else if (::IsWindowVisible(_hParentHandle) == FALSE)
-		{
-			::ShowWindow(_hParentHandle, SW_SHOW);
-			::SetFocus(_hParentHandle);
-			::ShowWindow(_hSelf, SW_HIDE);
-			::ShowWindow(_hListCtrl, SW_HIDE);
-		}
 	}
 }
 

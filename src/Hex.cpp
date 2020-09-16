@@ -30,6 +30,7 @@
 #include "tables.h"
 //#include "SysMsg.h"
 #include "ModifyMenu.h"
+#include "MenuCMDID.h"
 #include <stdlib.h>
 
 #include <shlwapi.h>
@@ -39,6 +40,7 @@
 /* menu entry count */
 const
 INT				nbFunc	= 9;
+INT cc=0;
 
 bool legacy;
 
@@ -325,14 +327,25 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
                 GetShortCuts(nppData._nppHandle);
 				break;
 			}
+
 			case NPPN_FILEOPENED:
-			case NPPN_FILECLOSED:
 			{
-				SystemUpdate();
+				TCHAR buffer[100]={0};
+				wsprintf(buffer,TEXT("NPPN_FILEOPENED=%d=%d"), cc++, isNotepadCreated);
+				::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM) (TCHAR*)::SendMessage(nppData._nppHandle,NPPM_GETRAWFULLCURRENTPATH,0,0));
+				//notifyCode->nmhdr.idFrom;
+				SystemUpdate(notifyCode->nmhdr.idFrom);
 				pCurHexEdit->_TB_OBS_UNDO=false;
-				pCurHexEdit->doDialog();
 				break;
 			}
+			case NPPN_FILECLOSED:
+			{				
+				SystemUpdate(0);
+				pCurHexEdit->_TB_OBS_UNDO=false;
+				//pCurHexEdit->doDialog();
+				break;
+			}
+
 			default:
 				break;
 		}
@@ -743,6 +756,7 @@ void openHelpDlg(void)
 }
 
 
+bool bSupressUpdate=0;
 /**************************************************************************
  *	SubWndProcNotepad
  */
@@ -772,24 +786,27 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
         case WM_COPYDATA:
         {
 			ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
-			OutputDebugString(_T("WM_COPYDATA\n"));
-			SystemUpdate();
+			//OutputDebugString(_T("WM_COPYDATA\n"));
+			//SystemUpdate();
             pCurHexEdit->SetStatusBar();
             break;
         }
 		case WM_COMMAND:
 		{
 			/* necessary for focus change between main and second SCI handle */
+			auto command = LOWORD(wParam);
 			if (HIWORD(wParam) == SCEN_SETFOCUS)
 			{
 				ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
-				OutputDebugString(_T("SCEN_SETFOCUS\n"));
-				SystemUpdate();
+				//::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("SCEN_SETFOCUS!!!!!!!!!!!");
+				if(command!=IDM_FILE_RESTORELASTCLOSEDFILE) {
+					SystemUpdate();
+				}
 			}
 
 			if (pCurHexEdit->isVisible() == true)
 			{
-				switch (LOWORD(wParam))
+				switch (command)
 				{
 					case IDM_EDIT_CUT:
 						pCurHexEdit->Cut();
@@ -885,11 +902,18 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 				}
 			}
 
-			switch (LOWORD(wParam))
-			{
+			switch (command)
+				{
+				case IDM_FILE_RESTORELASTCLOSEDFILE:
+				{
+					//bSupressUpdate=1;
+					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
+					SystemUpdate();
+					break;
+				}
 				case IDM_FILE_RELOAD:
 				{
-					if (HIWORD(wParam) != SCEN_SETFOCUS)
+					//if (HIWORD(wParam) != SCEN_SETFOCUS)
 					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
 					pCurHexEdit->SetCompareResult(NULL);
 					break;
@@ -990,7 +1014,7 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 				(notifyCode->nmhdr.code == SCN_SAVEPOINTREACHED))
 			{
 				OutputDebugString(_T("SAVEPOINTREACHED\n"));
-				SystemUpdate();
+				//SystemUpdate();
 				if (TRUE != pCurHexEdit->GetModificationState())
 					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
 				break;
@@ -1001,7 +1025,8 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 				case TCN_SELCHANGE:
 				{
 					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
-					OutputDebugString(_T("TCN_SELCHANGED\n"));
+					//OutputDebugString(_T("TCN_SELCHANGED\n"));
+					//int tabId = *(int*)(notifyCode+1);
 					SystemUpdate();
 					pCurHexEdit->SetStatusBar();
 					break;
@@ -1050,10 +1075,12 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 /**************************************************************************
  *	Update functions
  */
-void SystemUpdate(void)
+void SystemUpdate(uptr_t id)
 {
 	if (!isNotepadCreated)
 		return;
+
+	//if(bSupressUpdate&&!id) return;
 
 	auto lastScintilla = currentSC;
 	UpdateCurrentHScintilla();
@@ -1062,9 +1089,14 @@ void SystemUpdate(void)
 
 	if(legacy) {
 		pszNewPath = buffer?buffer:(buffer=new TCHAR[MAX_PATH]);
-		::SendMessage(nppData._nppHandle, NPPM_GETFULLCURRENTPATH,0,(LPARAM)pszNewPath);
+		if(id) {
+			::SendMessage(nppData._nppHandle, NPPM_GETFULLPATHFROMBUFFERID,id,(LPARAM)pszNewPath);
+		} else {
+			::SendMessage(nppData._nppHandle, NPPM_GETFULLCURRENTPATH,0,(LPARAM)pszNewPath);
+		}
 	} else {
-		pszNewPath = (TCHAR*)::SendMessage(nppData._nppHandle,NPPM_GETRAWFULLCURRENTPATH,0,0);
+		
+		pszNewPath = (TCHAR*)::SendMessage(nppData._nppHandle,NPPM_GETRAWFULLCURRENTPATH,(WPARAM)id,id);
 	}
 	
 	bool doUpdate=_tcscmp(pszNewPath, currentPath);
@@ -1073,13 +1105,17 @@ void SystemUpdate(void)
 			_tcscpy(currentPath, pszNewPath);
 		}
 
+		TCHAR buffer[256]={0};
+		wsprintf(buffer,TEXT("position=%d=%s=%d"), cc++, pszNewPath, id);
+		//::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buffer);
+
 		/* update edit */
 		if (currentSC == MAIN_VIEW)
 			pCurHexEdit = (HexEdit*)&hexEdit1;
 		else
 			pCurHexEdit = (HexEdit*)&hexEdit2;
 
-		pCurHexEdit->UpdateDocs(currentPath);
+		pCurHexEdit->UpdateDocs(currentPath, doUpdate);
 
 		if(lastScintilla!=currentSC) {
 			ActivateWindow();

@@ -325,7 +325,7 @@ void openHelpDlg(void);
 LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam);
 void setMenu(void);
 void ActivateWindow(void);
-void SystemUpdate(void);
+void SystemUpdate(uptr_t id=0);
 void GetSecondFileName(void);
 void DialogUpdate(void);
 void DoCompare(void);
