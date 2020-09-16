@@ -330,9 +330,7 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 
 			case NPPN_FILEOPENED:
 			{
-				TCHAR buffer[100]={0};
-				wsprintf(buffer,TEXT("NPPN_FILEOPENED=%d=%d"), cc++, isNotepadCreated);
-				::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM) (TCHAR*)::SendMessage(nppData._nppHandle,NPPM_GETRAWFULLCURRENTPATH,0,0));
+				//todo handle close
 				//notifyCode->nmhdr.idFrom;
 				SystemUpdate(notifyCode->nmhdr.idFrom);
 				pCurHexEdit->_TB_OBS_UNDO=false;
@@ -1013,7 +1011,7 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 				(notifyCode->nmhdr.hwndFrom == nppData._scintillaSecondHandle)) &&
 				(notifyCode->nmhdr.code == SCN_SAVEPOINTREACHED))
 			{
-				OutputDebugString(_T("SAVEPOINTREACHED\n"));
+				//OutputDebugString(_T("SAVEPOINTREACHED\n"));
 				//SystemUpdate();
 				if (TRUE != pCurHexEdit->GetModificationState())
 					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
@@ -1038,7 +1036,7 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 					tHexProp hexProp	 = pCurHexEdit->GetHexProp();
 
 					ret = ::CallWindowProc(wndProcNotepad, hWnd, message, wParam, lParam);
-					OutputDebugString(_T("TCN_DROPPED\n"));
+					//OutputDebugString(_T("TCN_DROPPED\n"));
 					SystemUpdate();
 
 					if (pOldHexEdit != pCurHexEdit)
@@ -1098,16 +1096,24 @@ void SystemUpdate(uptr_t id)
 		
 		pszNewPath = (TCHAR*)::SendMessage(nppData._nppHandle,NPPM_GETRAWFULLCURRENTPATH,(WPARAM)id,id);
 	}
-	
+
+#if 0
+	TCHAR buffer[256]={0};
+	wsprintf(buffer,TEXT("position=%d=%d"), cc++, lastScintilla!=currentSC);
+	::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buffer);
+#endif
+
 	bool doUpdate=_tcscmp(pszNewPath, currentPath);
 	if(doUpdate||lastScintilla!=currentSC) {
 		if(doUpdate) {
 			_tcscpy(currentPath, pszNewPath);
 		}
 
+#if 0
 		TCHAR buffer[256]={0};
 		wsprintf(buffer,TEXT("position=%d=%s=%d"), cc++, pszNewPath, id);
-		//::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buffer);
+		::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buffer);
+#endif
 
 		/* update edit */
 		if (currentSC == MAIN_VIEW)

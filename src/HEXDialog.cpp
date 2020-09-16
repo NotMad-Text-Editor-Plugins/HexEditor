@@ -801,6 +801,9 @@ void HexEdit::UpdateDocs(TCHAR* currFileName, BOOL docUpdate)
 				UpdateHeader(TRUE);
 			}
 			doDialog(false, docUpdate);
+		} else {
+			ChangeNppMenu(_nppData._nppHandle, _pCurProp->isVisible, _hParentHandle);
+			checkMenu(_pCurProp->isVisible);
 		}
 	} else {
 		/* attach new file */
@@ -4145,6 +4148,7 @@ void HexEdit::SetStatusBar(void)
 
 		/* display information in which mode it is (BigEndian or Little) */
 		::SendMessage(_hParent, NPPM_SETSTATUSBAR, STATUSBAR_UNICODE_TYPE, (LPARAM)(_pCurProp->isLittle == FALSE?_T("BigEndian"):_T("LittleEndian")));
+	
 	}
 }
 
