@@ -61,7 +61,6 @@ HexEdit::~HexEdit(void)
 {
 }
 
-
 void HexEdit::init(HINSTANCE hInst, NppData nppData, LPCTSTR iniFilePath)
 {
 	_nppData = nppData;
@@ -710,14 +709,14 @@ LRESULT HexEdit::runProcList(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
             case WM_CHAR:
             {
                 /* in case additional system keys are set ignore call of function */
-                if (((0x80 & ::GetKeyState(VK_CONTROL)) == 0x80) ||
-                    ((0x80 & ::GetKeyState(VK_MENU)) == 0x80)) {
+                if ((::GetKeyState(VK_CONTROL)&0x80) || (::GetKeyState(VK_MENU)&0x80)) {
                     return FALSE;
                 }
 
 				if (_pCurProp->editType == HEX_EDIT_HEX) {
 					if (OnCharItem(wParam, lParam) == FALSE)
 						return FALSE;
+					return FALSE;
 				} else {
 					if (OnCharDump(wParam, lParam) == FALSE)
 						return FALSE;

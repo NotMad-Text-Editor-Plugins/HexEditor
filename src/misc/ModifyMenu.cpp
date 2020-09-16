@@ -414,11 +414,34 @@ void ClearMenuStructures(void)
 	vMenuInfoView.clear();
 }
 
+void recordShortCut(ShortcutKey & skey, LPTSTR  pSc) {
+	LPTSTR  pScKey  = NULL;
+	if (pScKey = _tcsstr(pSc, _T("Ctrl+"))) {
+		skey._isCtrl = TRUE;
+		pSc = pScKey + _tcslen(_T("Ctrl+"));
+	}
+	if (pScKey = _tcsstr(pSc, _T("Alt+"))) {
+		skey._isAlt = TRUE;
+		pSc = pScKey + _tcslen(_T("Alt+"));
+	}
+	if (pScKey = _tcsstr(pSc, _T("Shift+"))) {
+		skey._isShift = TRUE;
+		pSc = pScKey + _tcslen(_T("Shift+"));
+	}
+	for (UINT j = 0; j < nrKeys; j++) {
+		if (_tcscmp(pSc, namedKeyArray[j].name)==0) {
+			skey._key = namedKeyArray[j].id;
+			break;
+		}
+	}
+}
+
 void GetShortCuts(HWND hWnd)
 {
 	//if(1) return;
     TCHAR   text[64];
     LPTSTR  pSc     = NULL;
+    LPTSTR  pScTerm     = NULL;
     LPTSTR  pScKey  = NULL;
     UINT    max     = sizeof(g_scList) / sizeof(tShortCut);
     HMENU   hMenu   = (HMENU)::SendMessage(hWnd, NPPM_INTERNAL_GETMENU, 0, 0);
@@ -431,31 +454,19 @@ void GetShortCuts(HWND hWnd)
         g_scList[i].isEnable = FALSE;
         if (::GetMenuString(hMenu, g_scList[i].uID, text, 64, MF_BYCOMMAND) != 0)
         {
-            //pSc = &(_tcsstr(text, _T("\t")))[1];
             pSc = _tcsstr(text, _T("\t"));
-            if (pSc != NULL) {
-                g_scList[i].isEnable = TRUE;
-                pScKey = _tcsstr(pSc, _T("Ctrl+"));
-                if (pScKey != NULL) {
-                    g_scList[i].scKey._isCtrl = TRUE;
-                    pSc = pScKey + _tcslen(_T("Ctrl+"));
-                }
-                pScKey = _tcsstr(pSc, _T("Alt+"));
-                if (pScKey != NULL) {
-                    g_scList[i].scKey._isAlt = TRUE;
-                    pSc = pScKey + _tcslen(_T("Alt+"));
-                }
-                pScKey = _tcsstr(pSc, _T("Shift+"));
-                if (pScKey != NULL) {
-                    g_scList[i].scKey._isShift = TRUE;
-                    pSc = pScKey + _tcslen(_T("Shift+"));
-                }
-                for (UINT j = 0; j < nrKeys; j++) {
-                    if (_tcscmp(pSc, namedKeyArray[j].name) == NULL) {
-                        g_scList[i].scKey._key = namedKeyArray[j].id;
-                        break;
-                    }
-                }
+            if (pSc) {
+				g_scList[i].isEnable = TRUE;
+				pScTerm = _tcsstr(text, _T(" or "));
+				if(pScTerm) {
+					pScTerm[0]='\0';
+				}
+				recordShortCut(g_scList[i].scKey, pSc);
+				if(pScTerm) {
+					recordShortCut(g_scList[i].scKey1, pScTerm+4);
+				} else {
+					g_scList[i].scKey1._key=0xff;
+				}
             }
         }
     }
@@ -486,17 +497,15 @@ UINT MapShortCutToMenuId(BYTE uChar)
 
     for (UINT i = 0; i < max; i++)
     {
-        if (g_scList[i].scKey._key == uChar)
-        {
-            if (g_scList[i].isEnable == TRUE)
-            {
-                if ((g_scList[i].scKey._isAlt   == TRUE) != ((bool)(0x80 & ::GetKeyState(VK_MENU))))    return 0;
-                if ((g_scList[i].scKey._isCtrl  == TRUE) != ((bool)(0x80 & ::GetKeyState(VK_CONTROL)))) return 0;
-                if ((g_scList[i].scKey._isShift == TRUE) != ((bool)(0x80 & ::GetKeyState(VK_SHIFT))))   return 0;
-                return g_scList[i].uID;
-            }
-            return 0;
-        }
+		if(g_scList[i].isEnable) {
+			ShortcutKey & sKey = g_scList[i].scKey._key==uChar?g_scList[i].scKey:g_scList[i].scKey1;
+			if (sKey._key==uChar
+				&&sKey._isAlt==(bool)(0x80 & ::GetKeyState(VK_MENU))
+				&&sKey._isCtrl==(bool)(0x80 & ::GetKeyState(VK_CONTROL))
+				&&sKey._isShift==(bool)(0x80 & ::GetKeyState(VK_SHIFT))) {
+				return g_scList[i].uID;
+			}
+		}
     }
     return 0;
 }

@@ -265,6 +265,7 @@ typedef struct tShortCut {
     BOOL            isEnable;
     UINT            uID;
     ShortcutKey     scKey;
+    ShortcutKey     scKey1;
 } tShortCut;
 
 #define G_FONTSIZE_MAX		10
