@@ -583,12 +583,12 @@ private:
 	void InvalidateNotepad(void)
 	{
 		/* select something in scintilla, it doesn't metter what your selected */
-		SciSubClassWrp::execute(SCI_SETSEL, 0, _pCurProp->isSel);
+		//SciSubClassWrp::execute(SCI_SETSEL, 0, _pCurProp->isSel);
 
 		/* updates notepad icons and menus */
-		NMHDR	nm;
-		memset(&nm, 0, sizeof(NMHDR));
-		::SendMessage(_nppData._nppHandle, WM_NOTIFY, 0, (LPARAM)&nm);
+		//NMHDR	nm;
+		//memset(&nm, 0, sizeof(NMHDR));
+		//::SendMessage(_nppData._nppHandle, WM_NOTIFY, 0, (LPARAM)&nm);
 		SetStatusBar();
 	};
 
