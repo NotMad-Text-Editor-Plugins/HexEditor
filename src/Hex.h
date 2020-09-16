@@ -157,6 +157,8 @@ typedef struct tCmpResult
 	INT					offCmpCache;			// display cache offset
 	INT					lenCmpCache;			// display cache length
 	CHAR				cmpCache[CACHE_SIZE];	// display cache
+	TCHAR				fileA[MAX_PATH];
+	TCHAR				fileB[MAX_PATH];
 } tCmpResult;
 
 typedef struct tHexProp

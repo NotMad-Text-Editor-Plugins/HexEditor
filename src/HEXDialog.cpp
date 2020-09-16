@@ -140,14 +140,15 @@ INT_PTR CALLBACK HexEdit::run_dlgProc(UINT Message, WPARAM wParam, LPARAM lParam
 		}
 		case WM_DESTROY :
 		{
-			for (size_t i = 0; i < _hexProp.size(); i++) {
-				if (_hexProp[i].pCmpResult != NULL)
-				{
-					::CloseHandle(_hexProp[i].pCmpResult->hFile);
-					::DeleteFile(_hexProp[i].pCmpResult->szFileName);
-				}
-			}
-			_hexProp.clear();
+			//todo:: release
+			//for (size_t i = 0; i < _hexProp.size(); i++) {
+			//	if (_hexProp[i].pCmpResult != NULL)
+			//	{
+			//		::CloseHandle(_hexProp[i].pCmpResult->hFile);
+			//		::DeleteFile(_hexProp[i].pCmpResult->szFileName);
+			//	}
+			//}
+			//_hexProp.clear();
 			break;
 		}
 		case WM_ACTIVATE:
@@ -821,110 +822,34 @@ LRESULT HexEdit::runProcList(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
 }
 
 
-void HexEdit::UpdateDocs(LPCTSTR* pFiles, UINT numFiles, INT openDoc)
+void HexEdit::UpdateDocs(TCHAR* currFileName)
 {
 	/* update current visible line */
 	GetLineVis();
-
-	vector<tHexProp>	tmpList;
-
-	/* attach (un)known files */
-	//筛选当前编辑器视图内存在的文件。
-	for (size_t i = 0; i < numFiles; i++)
-	{
-		BOOL isCopy = FALSE;
-
-
-		for (size_t j = 0; j < _hexProp.size(); j++) {
-			if (_tcsicmp(pFiles[i], _hexProp[j].szFileName) == 0) {
-				tmpList.push_back(_hexProp[j]);
-				isCopy = TRUE;
-				break;
-			}
-		}
-
-		if (isCopy == FALSE)
-		{
-			/* attach new file */
-			tHexProp	prop = getProp();
-
-			_tcscpy(prop.szFileName, pFiles[i]);
-			prop.isModified		= FALSE;
-			prop.fontZoom		= 0;
-			prop.pCmpResult		= NULL;
-
-			/* test if extension of file is registered */
-			prop.isVisible		= IsExtensionRegistered(pFiles[i]);
-
-			if (prop.isVisible == FALSE)
-			{
-				prop.isVisible  = IsPercentReached(pFiles[i]);
-			}
-
-			tmpList.push_back(prop);
-		}
-	}
-
-	/* delete possible allocated compare buffer */
-	//同步后，有文件关闭
-	if(0) //??????
-	if (numFiles < _hexProp.size())
-	{
-		for (size_t i = 0; i < _hexProp.size(); i++) {
-			BOOL isCopy = FALSE;
-			for (size_t j = 0; j < numFiles; j++) { //记录的文件_hexProp可在现存文件numFiles中找到，不做任何操作。
-				if (_tcsicmp(_hexProp[i].szFileName, tmpList[j].szFileName) == 0) {
-					isCopy = TRUE;
-					break;
-				}
-			}
-			if (isCopy == FALSE) {
-				SetCompareResult(NULL);
-			}
-		}
-	}
-
-	/* copy new list into current list */
-	_hexProp = tmpList;
-	//todo:: 用map代替列表。
-
-	if (_openDoc != openDoc)
-	{
-		/* store current open document */
-		_openDoc = openDoc;
-
-		if (openDoc != -1)
-		{
+	auto nxtPropIter = _hexProp.find(currFileName);
+	if(nxtPropIter!=_hexProp.end()) {
+		tHexProp* nxtProp = (*nxtPropIter).second;
+		if(nxtProp!=_pCurProp) {
 			/* set the current file attributes */
-			_pCurProp = &_hexProp[_openDoc];
-			if ((_lastOpenHex != _openDoc) && (_pCurProp->isVisible == TRUE)) {
+			_pCurProp = nxtProp;
+			if (_pCurProp->isVisible) {
 				UpdateHeader(TRUE);
 			}
 			doDialog();
-
-			/* init open last open hex */
-			if (_lastOpenHex == -1) {
-				_lastOpenHex = _openDoc;
-			}
 		}
-		else
-		{
-			doDialog();
-			_pCurProp = NULL;
-		}
-	}
-	else if ((tmpList.size() != 0) && (openDoc != -1))
-	{
-		/* set the current file attributes */
-		_pCurProp = &_hexProp[openDoc];
-		if ((_pCurProp->isVisible == TRUE) && (!isVisible())) {
-			UpdateHeader(TRUE);
-		}
+	} else {
+		/* attach new file */
+		_pCurProp = new tHexProp{getProp()};
+		tHexProp & prop = *_pCurProp;
+		_tcscpy(prop.szFileName, currFileName);
+		prop.isModified = FALSE;
+		prop.fontZoom = 0;
+		prop.pCmpResult = NULL;
+		prop.isVisible = FALSE;
+		_hexProp.insert(pair<TCHAR*, tHexProp*>(prop.szFileName, &prop));
+		//_hexProp.insert_or_assign(prop.szFileName, prop);
+		// have to hide hex menus.
 		doDialog();
-	}
-	else
-	{
-		_pCurProp = NULL;
 	}
 }
 
@@ -940,7 +865,7 @@ void HexEdit::doDialog(BOOL toggle)
 		return;
 
 	/* toggle view if user requested */
-	if (toggle == TRUE)
+	if (toggle)
 	{
 		bEditable=0;
 		_pCurProp->isVisible ^= TRUE;
@@ -949,7 +874,7 @@ void HexEdit::doDialog(BOOL toggle)
 		BOOL isModified = (BOOL)SciSubClassWrp::execute(SCI_GETMODIFY);
 		BOOL isModifiedBefore = _pCurProp->isModified;
 
-		if (_pCurProp->isVisible == TRUE)
+		if (_pCurProp->isVisible)
 		{
 			_pCurProp->isSel			= FALSE;
 			_pCurProp->anchorItem		= 0;
@@ -984,12 +909,15 @@ void HexEdit::doDialog(BOOL toggle)
 		UpdateHeader(_pCurProp->isVisible);
 	}
 
-	/* set window position and display informations */
-	SetFont();
-	MoveView();
-
-	/* set focus */
-	ActivateWindow();
+	//if(_pCurProp->isVisible) {
+		/* set window position and display informations */
+		SetFont();
+		MoveView();
+		/* set focus */
+		ActivateWindow();
+	//} else {
+	//	::ShowWindow(_hParentHandle, SW_SHOW);
+	//}
 
 	/* set coding entries gray */
     ChangeNppMenu(_nppData._nppHandle, _pCurProp->isVisible, _hParentHandle);
@@ -4245,7 +4173,7 @@ void HexEdit::SetStatusBar(void)
 		TCHAR buffer[64];
 
 		/* set mode */
-		::SendMessage(_hParent, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("Hex Edit View"));
+		//::SendMessage(_hParent, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("Hex Edit View"));
 		/* set doc length */
 		_stprintf(buffer, _T("nb char : %d"), _currLength);
 		::SendMessage(_hParent, NPPM_SETSTATUSBAR, STATUSBAR_DOC_SIZE, (LPARAM)buffer);

@@ -40,6 +40,8 @@
 const
 INT				nbFunc	= 9;
 
+bool legacy;
+
 /* for subclassing */
 WNDPROC	wndProcNotepad = NULL;
 
@@ -51,6 +53,7 @@ TCHAR			currentPath[MAX_PATH];
 TCHAR			configPath[MAX_PATH];
 TCHAR			iniFilePath[MAX_PATH];
 TCHAR			cmparePath[MAX_PATH];
+TCHAR*			buffer;
 UINT			currentSC	= MAIN_VIEW;
 INT				openDoc1	= -1;
 INT				openDoc2	= -1;
@@ -306,7 +309,7 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 
 				long version = ::SendMessage(nppData._nppHandle, NPPM_GETNOTMADVERSION, 0, 0);
 
-				bool legacy = version<0x666;
+				legacy = version<0x666;
 
 				g_TBHex.HRO = HRO;
 				if(legacy)g_TBHex.hToolbarBmp = (HBITMAP)::LoadImage((HINSTANCE)g_hModule, MAKEINTRESOURCE(IDB_TB_HEX), IMAGE_BITMAP, 0, 0, (LR_DEFAULTSIZE | LR_LOADMAP3DCOLORS));
@@ -1049,78 +1052,41 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
  */
 void SystemUpdate(void)
 {
-	if (isNotepadCreated == FALSE)
+	if (!isNotepadCreated)
 		return;
 
-	//if (1) return;
-
-	OutputDebugString(_T("SystemUpdate\n"));
-
-	UINT		oldSC		= currentSC;
-	UINT		newDocCnt	= 0;
-	TCHAR		pszNewPath[MAX_PATH];
-
-	/* update open files */
+	auto lastScintilla = currentSC;
 	UpdateCurrentHScintilla();
-	::SendMessage(nppData._nppHandle, NPPM_GETFULLCURRENTPATH, 0, (LPARAM)pszNewPath);
-	INT newOpenDoc1 = (INT)::SendMessage(nppData._nppHandle, NPPM_GETCURRENTDOCINDEX, 0, MAIN_VIEW);
-	INT newOpenDoc2 = (INT)::SendMessage(nppData._nppHandle, NPPM_GETCURRENTDOCINDEX, 0, SUB_VIEW);
 
-	if ((newOpenDoc1 != openDoc1) || (newOpenDoc2 != openDoc2) || 
-		(_tcscmp(pszNewPath, currentPath) != 0) || (oldSC != currentSC))
-	{
-		/* set new file */
-		_tcscpy(currentPath, pszNewPath);
-		openDoc1 = newOpenDoc1;
-		openDoc2 = newOpenDoc2;
+	TCHAR*  pszNewPath;
 
-		INT			i = 0;
-		INT			docCnt1;
-		INT			docCnt2;
-		INT			docCnt;
-		LPCTSTR		*fileNames;
-		BOOL		isAllocOk = TRUE;
-		
-		/* update doc information */
-		docCnt1		= (INT)::SendMessage(nppData._nppHandle, NPPM_GETNBOPENFILES, 0, (LPARAM)PRIMARY_VIEW);
-		docCnt2		= (INT)::SendMessage(nppData._nppHandle, NPPM_GETNBOPENFILES, 0, (LPARAM)SECOND_VIEW);
-		fileNames	= (LPCTSTR*)new LPTSTR[docCnt=max(docCnt1, docCnt2)];
-
-		if (fileNames)
-		{
-			for (i = 0; i < docCnt && isAllocOk; i++) {
-				fileNames[i] = (LPTSTR)new TCHAR[MAX_PATH];
-				if (fileNames[i] == NULL) {
-					isAllocOk = FALSE;
-					break;
-				}
-			}
-
-			if (isAllocOk)
-			{
-				::SendMessage(nppData._nppHandle, NPPM_GETOPENFILENAMESPRIMARY, (WPARAM)fileNames, (LPARAM)docCnt1);
-				hexEdit1.UpdateDocs(fileNames, docCnt1, openDoc1);
-
-				::SendMessage(nppData._nppHandle, NPPM_GETOPENFILENAMESSECOND, (WPARAM)fileNames, (LPARAM)docCnt2);
-				hexEdit2.UpdateDocs(fileNames, docCnt2, openDoc2);
-
-				/* update edit */
-				if (currentSC == MAIN_VIEW)
-					pCurHexEdit = (HexEdit*)&hexEdit1;
-				else
-					pCurHexEdit = (HexEdit*)&hexEdit2;
-
-				ActivateWindow();
-				setMenu();
-			}
-
-			for (i = 0; i < docCnt; i++)
-				if (fileNames[i])
-					delete [] fileNames[i];
-			delete [] fileNames;
-		}
+	if(legacy) {
+		pszNewPath = buffer?buffer:(buffer=new TCHAR[MAX_PATH]);
+		::SendMessage(nppData._nppHandle, NPPM_GETFULLCURRENTPATH,0,(LPARAM)pszNewPath);
+	} else {
+		pszNewPath = (TCHAR*)::SendMessage(nppData._nppHandle,NPPM_GETRAWFULLCURRENTPATH,0,0);
 	}
-	//DialogUpdate();
+	
+	bool doUpdate=_tcscmp(pszNewPath, currentPath);
+	if(doUpdate||lastScintilla!=currentSC) {
+		if(doUpdate) {
+			_tcscpy(currentPath, pszNewPath);
+		}
+
+		/* update edit */
+		if (currentSC == MAIN_VIEW)
+			pCurHexEdit = (HexEdit*)&hexEdit1;
+		else
+			pCurHexEdit = (HexEdit*)&hexEdit2;
+
+		pCurHexEdit->UpdateDocs(currentPath);
+
+		if(lastScintilla!=currentSC) {
+			ActivateWindow();
+			setMenu();
+		}
+		DialogUpdate();
+	}
 }
 
 void ActivateWindow(void)
@@ -1141,27 +1107,23 @@ void ActivateWindow(void)
 void DialogUpdate(void)
 {
 	/* Pattern/Replace dialog is visible? */
-	if (((hexEdit1.isVisible() == false) && (hexEdit2.isVisible() == false)) &&
-		(patDlg.isVisible() == true))
+	if (patDlg.isVisible() && (!hexEdit1.isVisible()  and !hexEdit2.isVisible()))
 	{
 		patDlg.destroy();
 	}
 
 	/* find replace dialog change */
-	if ((pCurHexEdit->isVisible() == false) && (findRepDlg.isVisible() == true))
+	if (findRepDlg.isVisible() && !pCurHexEdit->isVisible())
 	{
 		findRepDlg.display(FALSE);
 		::SendMessage(nppData._nppHandle, WM_COMMAND, (findRepDlg.isFindReplace() == TRUE)?IDM_SEARCH_REPLACE:IDM_SEARCH_FIND, 0);
 	}
-	else if (g_hFindRepDlg != NULL)
+	else if (g_hFindRepDlg && ::IsWindowVisible(g_hFindRepDlg) && pCurHexEdit->isVisible())
 	{
-		if ((pCurHexEdit->isVisible() == true) && (::IsWindowVisible(g_hFindRepDlg) == TRUE))
-		{
-			TCHAR	text[5];
-			::GetWindowText(g_hFindRepDlg, text, 5);
-			findRepDlg.doDialog(pCurHexEdit->getHSelf(), (_tcscmp(text, _T("Find")) != 0)?TRUE:FALSE);
-			::SendMessage(g_hFindRepDlg, WM_COMMAND, IDCANCEL, 0);
-		}
+		TCHAR	text[5];
+		::GetWindowText(g_hFindRepDlg, text, 5);
+		findRepDlg.doDialog(pCurHexEdit->getHSelf(), (_tcscmp(text, _T("Find")) != 0)?TRUE:FALSE);
+		::SendMessage(g_hFindRepDlg, WM_COMMAND, IDCANCEL, 0);
 	}
 }
 

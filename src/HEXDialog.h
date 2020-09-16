@@ -29,6 +29,7 @@
 #include <windows.h>
 #include <windowsx.h>
 #include <commctrl.h>
+#include <map>
 
 #include "tables.h"
 
@@ -68,14 +69,14 @@ public:
 
    	void doDialog(BOOL toggle = FALSE);
 
-	void UpdateDocs(LPCTSTR* pFiles, UINT numFiles, INT openDoc);
+	void UpdateDocs(TCHAR* currFileName);
 
 	void FileNameChanged(LPTSTR newPath)
 	{
-		if (_openDoc == -1)
+		if (!_pCurProp)
 			return;
 
-		wcscpy_s(_hexProp[_openDoc].szFileName, newPath);
+		wcscpy_s(_pCurProp->szFileName, newPath);
 	};
 
 	void SetParentNppHandle(HWND hWnd, UINT cont)
@@ -291,17 +292,17 @@ public:
 	void ClearAllCompareResults()
 	{
 		//::MessageBox(NULL, TEXT("ClearAllCompareResults"), TEXT(""), MB_OK);
-		for (size_t i = 0; i < _hexProp.size(); i++) {
-			if (_hexProp[i].pCmpResult != NULL) {
-				if (_hexProp[i].pCmpResult->pCmpRef != NULL) {
-                    _hexProp[i].pCmpResult->pCmpRef->pCmpRef = NULL;
-                } else {
-					::CloseHandle(_hexProp[i].pCmpResult->hFile);
-					::DeleteFile(_hexProp[i].pCmpResult->szFileName);
-				}
-				_hexProp[i].pCmpResult = NULL;
-			}
-		}
+		//for (size_t i = 0; i < _hexProp.size(); i++) {
+		//	if (_hexProp[i].pCmpResult != NULL) {
+		//		if (_hexProp[i].pCmpResult->pCmpRef != NULL) {
+        //            _hexProp[i].pCmpResult->pCmpRef->pCmpRef = NULL;
+        //        } else {
+		//			::CloseHandle(_hexProp[i].pCmpResult->hFile);
+		//			::DeleteFile(_hexProp[i].pCmpResult->szFileName);
+		//		}
+		//		_hexProp[i].pCmpResult = NULL;
+		//	}
+		//}
 	};
 
 	void SetCompareResult(tCmpResult* pCmpResult, tCmpResult* pCmpRef = NULL)
@@ -670,7 +671,15 @@ private:
 
 	/* properties of open files */
 	tHexProp*			_pCurProp;
-	vector<tHexProp>	_hexProp;
+
+	struct ptrCmp
+	{
+		bool operator()( const TCHAR * s1, const TCHAR * s2 ) const
+		{
+			return lstrcmp( s1, s2 ) < 0;
+		}
+	};
+	map<TCHAR*, tHexProp*, ptrCmp>	_hexProp;
 
 	/* for selection */
 	BOOL				_onChar;
