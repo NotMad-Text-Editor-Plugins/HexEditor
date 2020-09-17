@@ -443,7 +443,6 @@ LRESULT HexEdit::runProcParent(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lP
 	return SciSubClassWrp::CallScintillaWndProc(hwnd, Message, wParam, lParam);
 }
 
-
 LRESULT HexEdit::runProcList(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lParam)
 {
 	if (_pCurProp != NULL)
@@ -689,6 +688,14 @@ LRESULT HexEdit::runProcList(HWND hwnd, UINT Message, WPARAM wParam, LPARAM lPar
                         return FALSE;
 					case IDM_EDIT_REDO:
                     case IDM_EDIT_UNDO:
+					{
+						if(_TB_OBS_UNDO) {
+							::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("Rejected！"));
+							return TRUE;
+						}
+						::SendMessage(_hParent, WM_COMMAND, uCmdID, 0);
+						return FALSE;
+					}
                     case IDM_VIEW_ZOOMIN:
                     case IDM_VIEW_ZOOMOUT:
                     case IDM_VIEW_ZOOMRESTORE:
@@ -866,10 +873,12 @@ void HexEdit::doDialog(BOOL toggle, BOOL docUpdate)
 			ConvertSelHEXToNpp();
 		}
 		
-		if ((isModified == FALSE) && (isModifiedBefore == FALSE)) {
-			SciSubClassWrp::execute(SCI_SETSAVEPOINT);
-		} else {
-			_pCurProp->isModified = TRUE;
+		if(!::SendMessage(nppData._nppHandle,NPPM_CURRENTBINMODE,0,0)) {
+			if (!isModified && !isModifiedBefore) {
+				SciSubClassWrp::execute(SCI_SETSAVEPOINT);
+			} else {
+				_pCurProp->isModified = TRUE;
+			}
 		}
 
 		/* update the header */
@@ -901,7 +910,14 @@ void HexEdit::doDialog(BOOL toggle, BOOL docUpdate)
 	}
 
 	if(toggle) {
-		_TB_OBS_UNDO=1;
+		if(!::SendMessage(nppData._nppHandle,NPPM_CURRENTBINMODE,0,0)) {
+			int val = _pCurProp->isVisible?2:1;
+			_TB_OBS_UNDO=_historyDirty&val;
+
+			//TCHAR buffer[256]={0};
+			//wsprintf(buffer,TEXT("position=%d=%d=%d"), val, _TB_OBS_UNDO, _historyDirty);
+			//::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)buffer);
+		}
 		_historyClean=1;
 		bEditable=1;
 	}
@@ -4151,6 +4167,7 @@ void HexEdit::SetStatusBar(void)
 	}
 }
 
+#define spec 115
 
 void HexEdit::ConvertSelNppToHEX(void)
 {
@@ -4164,14 +4181,14 @@ void HexEdit::ConvertSelNppToHEX(void)
 	UINT	offset			= 0;
 
 	_currLength = (UINT)SciSubClassWrp::execute(SCI_GETLENGTH, 0, 0);
-
+	
 	if ((_pCurProp->isLittle == FALSE) || (_pCurProp->bits == HEX_BYTE))
 	{
 		switch (_pCurProp->codePage)
 		{
 			case HEX_CODE_NPP_UTF8_BOM:
 			{
-				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, 0);
+				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, spec);
 				::SendMessage(_nppData._nppHandle, WM_COMMAND, IDM_FORMAT_ANSI, 0);
 				SetSelection(selStart+3, selEnd+3, HEX_SEL_NORM, (selEnd+3) % VIEW_ROW == 0);
 				break;
@@ -4192,7 +4209,7 @@ void HexEdit::ConvertSelNppToHEX(void)
 					if (curPos <= selStart) posStart += 2;
 					if (curPos <= selEnd) posEnd += 2;
 				}
-				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, 0);
+				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, spec);
 				::SendMessage(_nppData._nppHandle, WM_COMMAND, IDM_FORMAT_ANSI, 0);
 				SetSelection(posStart, posEnd, HEX_SEL_NORM, posEnd % VIEW_ROW == 0);
 				break;
@@ -4218,7 +4235,7 @@ void HexEdit::ConvertSelNppToHEX(void)
 		{
 			case HEX_CODE_NPP_UTF8_BOM:
 			{
-				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, 0);
+				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, spec);
 				::SendMessage(_nppData._nppHandle, WM_COMMAND, IDM_FORMAT_ANSI, 0);
 
 				selStart += 3;
@@ -4238,7 +4255,7 @@ void HexEdit::ConvertSelNppToHEX(void)
 					else if ((byte & 0xE0) == 0xC0) curPos+=2;
 					if (curPos <= selStart) posStart += 2;
 				}
-				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, 0);
+				::SendMessage(_nppData._nppHandle, NPPM_DECODESCI, currentSC, spec);
 				::SendMessage(_nppData._nppHandle, WM_COMMAND, IDM_FORMAT_ANSI, 0);
 
 				selStart = posStart;
@@ -4268,7 +4285,7 @@ void HexEdit::ConvertSelHEXToNpp(void)
 	INT		selEnd		= GetCurrentPos();
 	INT		offset		= 0;
 
-	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, 0);
+	UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_ENCODESCI, currentSC, spec);
 	//UniMode	um	= (UniMode)::SendMessage(_nppData._nppHandle, NPPM_GETBUFFERENCODING, 
 	//	::SendMessage(_nppData._nppHandle, NPPM_GETCURRENTBUFFERID, 0, 0), 0);
 

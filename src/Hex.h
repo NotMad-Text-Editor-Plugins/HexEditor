@@ -344,5 +344,7 @@ void ClientToScreen(HWND hWnd, RECT* rect);
 void ScreenToClient(HWND hWnd, RECT* rect);
 
 
+extern NppData			nppData;
+
 #endif //HEX_H
 

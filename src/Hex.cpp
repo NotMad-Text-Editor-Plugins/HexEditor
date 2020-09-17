@@ -241,24 +241,28 @@ extern "C" __declspec(dllexport) void beNotified(SCNotification *notifyCode)
 
 					if(bEditable && notifyCode->length>0) {
 						if(pCurHexEdit->_historyClean) {
-							//::SendMessage(nppData._nppHandle,NPPM_OBSCUREUNDOICON, 0, 0);
-							//::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, pCurHexEdit==&hexEdit1?1:2, 1);
-							int val = pCurHexEdit->GetHexProp().isVisible?1:2;
-							pCurHexEdit->_historyDirty|=val;
-							pCurHexEdit->_TB_OBS_UNDO=false;
-							//TCHAR buffer[100]={0};
-							//wsprintf(buffer,TEXT("position=%d"), pCurHexEdit->_historyDirty);
-							//::MessageBox(NULL, buffer, TEXT(""), MB_OK);
+							if(!::SendMessage(nppData._nppHandle,NPPM_CURRENTBINMODE,0,0)) {
+								//::SendMessage(nppData._nppHandle,NPPM_OBSCUREUNDOICON, 0, 0);
+								//::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, pCurHexEdit==&hexEdit1?1:2, 1);
+								int val = pCurHexEdit->GetHexProp().isVisible?1:2;
+								pCurHexEdit->_historyDirty|=val;
+								pCurHexEdit->_TB_OBS_UNDO=false;
+								//TCHAR buffer[100]={0};
+								//wsprintf(buffer,TEXT("position=%d"), pCurHexEdit->_historyDirty);
+								//::MessageBox(NULL, buffer, TEXT(""), MB_OK);
 
-							if(pCurHexEdit->_historyDirty>=3) {
-								::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, pCurHexEdit==&hexEdit1?1:2, 1);
+								if(pCurHexEdit->_historyDirty>=3) {
+									::SendMessage(nppData._nppHandle, NPPM_EMPTYEDITHISTORY, pCurHexEdit==&hexEdit1?1:2, 1);
+									pCurHexEdit->_historyDirty=0;
+
+									//::MessageBox(NULL, TEXT("_historyClean"), TEXT(""), MB_OK);
+								}
+								pCurHexEdit->_historyDirty|=val;
+							} else {
 								pCurHexEdit->_historyDirty=0;
-
-								//::MessageBox(NULL, TEXT("_historyClean"), TEXT(""), MB_OK);
+								pCurHexEdit->_TB_OBS_UNDO=false;
 							}
-							pCurHexEdit->_historyDirty|=val;
 							pCurHexEdit->_historyClean=0;
-
 						}
 					}
 
@@ -802,6 +806,14 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 				}
 			}
 
+			if(command==IDM_EDIT_UNDO||command==IDM_EDIT_REDO) {
+				if(pCurHexEdit->_TB_OBS_UNDO) {
+
+					::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("Rejected！"));
+
+					return TRUE;
+				}
+			}
 			if (pCurHexEdit->isVisible() == true)
 			{
 				switch (command)
@@ -887,14 +899,6 @@ LRESULT CALLBACK SubWndProcNotepad(HWND hWnd, UINT message, WPARAM wParam, LPARA
 					case IDM_EDIT_RMV_TAB:
 					case IDM_EDIT_STREAM_COMMENT:
 						return TRUE;
-					case IDM_EDIT_UNDO:
-					case IDM_EDIT_REDO:
-						if(pCurHexEdit->_TB_OBS_UNDO) {
-
-							::SendMessage(nppData._nppHandle, NPPM_SETSTATUSBAR, STATUSBAR_DOC_TYPE, (LPARAM)_T("Rejected……"));
-
-							return TRUE;
-						}
 					default:
 						break;
 				}
